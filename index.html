@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 자동화 · Jev 인스타 트렌드 대시보드</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#262a33; --text:#e6e8ee; --muted:#8b91a1; --accent:#7c9cff; --green:#3ec38b; --amber:#f5b041; --red:#f06a6a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:20px 28px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; }
+  header .meta { color:var(--muted); font-size:13px; }
+  main { display:grid; grid-template-columns: 1fr 320px; gap:20px; padding:20px 28px; }
+  @media (max-width: 1000px) { main { grid-template-columns:1fr; } }
+  section.panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  h2 { font-size:14px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { padding:4px 10px; border-radius:999px; background:#222634; font-size:12px; color:var(--text); border:1px solid transparent; cursor:pointer; }
+  .chip.active { border-color:var(--accent); color:var(--accent); }
+  .chip small { color:var(--muted); margin-left:4px; }
+  .filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  select, input[type=search], button { background:#222634; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-size:13px; }
+  input[type=search] { flex:1; min-width:180px; }
+  button.primary { background:var(--accent); color:#0b0d12; border:none; font-weight:600; cursor:pointer; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
+  .card { background:#1c2029; border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .card .top { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
+  .card .acct { color:var(--accent); font-weight:600; }
+  .card .summary { font-size:14px; line-height:1.45; }
+  .card .caption { font-size:12px; color:var(--muted); max-height:0; overflow:hidden; transition:max-height .2s; white-space:pre-wrap; }
+  .card.open .caption { max-height:400px; overflow:auto; }
+  .card .tags { display:flex; gap:4px; flex-wrap:wrap; }
+  .tag { font-size:11px; padding:2px 7px; border-radius:6px; background:#262b38; color:#c9cfdd; }
+  .tag.tool { background:#2a3352; color:#a9bbff; }
+  .tag.type { background:#2b3a31; color:#8fe0b6; }
+  .card .stats { font-size:12px; color:var(--muted); display:flex; gap:10px; }
+  .score { font-weight:700; color:var(--amber); }
+  .card .actions { display:flex; gap:6px; align-items:center; margin-top:4px; }
+  .card textarea { width:100%; background:#141720; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px; font-size:12px; min-height:52px; resize:vertical; }
+  .status { font-size:11px; padding:2px 8px; border-radius:999px; font-weight:600; }
+  .status.보류 { background:#2a2e3a; color:var(--muted); }
+  .status.시도중 { background:#3a3320; color:var(--amber); }
+  .status.적용완료 { background:#1f3a2e; color:var(--green); }
+  .queue li { list-style:none; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .queue li:last-child { border-bottom:none; }
+  .queue a { color:var(--accent); text-decoration:none; }
+  ul.queue { padding:0; margin:0; }
+  .bars { display:flex; flex-direction:column; gap:6px; }
+  .bar { display:grid; grid-template-columns: 80px 1fr 30px; align-items:center; gap:8px; font-size:12px; }
+  .bar .track { height:8px; background:#222634; border-radius:4px; overflow:hidden; }
+  .bar .fill { height:100%; background:var(--accent); }
+  .empty { text-align:center; padding:60px 20px; color:var(--muted); line-height:1.7; }
+  .empty code { background:#222634; padding:2px 6px; border-radius:4px; }
+  .top5 li { list-style:none; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; display:flex; gap:8px; }
+  .top5 li span.rank { color:var(--amber); font-weight:700; width:18px; }
+  .checklist { font-size:12px; color:#c9cfdd; padding-left:18px; margin:4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>AI 자동화 · Jev 인스타 트렌드</h1>
+    <div class="meta" id="meta"></div>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button id="exportNotes">내 메모 내보내기</button>
+    <button id="importNotes">메모 불러오기</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+  </div>
+</header>
+<main>
+  <div>
+    <section class="panel">
+      <h2>이번 주 트렌드 키워드</h2>
+      <div class="chips" id="trendChips"></div>
+    </section>
+    <section class="panel">
+      <h2>피드</h2>
+      <div class="filters">
+        <input type="search" id="q" placeholder="검색 (캡션/계정/키워드)">
+        <select id="fTool"><option value="">툴 전체</option></select>
+        <select id="fType"><option value="">유형 전체</option></select>
+        <select id="fStatus"><option value="">상태 전체</option><option>보류</option><option>시도중</option><option>적용완료</option></select>
+        <select id="fPeriod"><option value="">기간 전체</option><option value="7">최근 7일</option><option value="30">최근 30일</option></select>
+        <select id="sort"><option value="score">트렌드 점수순</option><option value="date">최신순</option><option value="likes">좋아요순</option></select>
+      </div>
+      <div class="grid" id="feed"></div>
+    </section>
+  </div>
+  <aside>
+    <section class="panel">
+      <h2>급상승 TOP 5</h2>
+      <ul class="top5" id="top5"></ul>
+    </section>
+    <section class="panel">
+      <h2>적용 대기열 (시도중)</h2>
+      <ul class="queue" id="queue"></ul>
+    </section>
+    <section class="panel">
+      <h2>툴별 언급량 (최근 30일)</h2>
+      <div class="bars" id="toolBars"></div>
+    </section>
+    <section class="panel">
+      <h2>적용 완료</h2>
+      <ul class="queue" id="done"></ul>
+    </section>
+  </aside>
+</main>
+
+<style>
+  #gate { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:99; }
+  #gate form { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:28px; width:320px; display:flex; flex-direction:column; gap:12px; }
+  #gate h1 { font-size:16px; margin:0; }
+  #gate input { background:#141720; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:10px; font-size:14px; }
+  #gate .err { color:var(--red); font-size:12px; min-height:16px; }
+</style>
+<div id="gate"><form id="gateForm"><h1>대시보드 잠금</h1><input type="password" id="pw" placeholder="비밀번호" autofocus autocomplete="current-password"><label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="remember" checked> 이 기기에서 기억</label><div class="err" id="gateErr"></div><button class="primary" type="submit">열기</button></form></div>
+<script>
+(async function(){
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function decrypt(pw, enc) {
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name:'PBKDF2', salt:b64(enc.salt), iterations:enc.iter, hash:'SHA-256' }, km, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+    const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64(enc.iv) }, key, b64(enc.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+  const enc = await (await fetch('data.enc.json?ts=' + Date.now(), { cache:'no-store' })).json();
+  const form = document.getElementById('gateForm'), err = document.getElementById('gateErr');
+  async function tryUnlock(pw, remember) {
+    try {
+      window.IG_DATA = await decrypt(pw, enc);
+      if (remember) localStorage.setItem('ig-dashboard-pw', pw); else localStorage.removeItem('ig-dashboard-pw');
+      document.getElementById('gate').remove();
+      window.bootDashboard();
+      return true;
+    } catch (e) { return false; }
+  }
+  const saved = localStorage.getItem('ig-dashboard-pw');
+  if (saved && await tryUnlock(saved, true)) return;
+  form.onsubmit = async ev => { ev.preventDefault(); err.textContent = ''; const ok = await tryUnlock(document.getElementById('pw').value, document.getElementById('remember').checked); if (!ok) err.textContent = '비밀번호가 맞지 않아요'; };
+})();
+</script>
+<script>
+window.bootDashboard = function(){
+  const DATA = window.IG_DATA || { posts: [] };
+  const NOTES_KEY = 'ig-dashboard-notes-v1';
+  let notes = {};
+  try { notes = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); } catch(e) { notes = {}; }
+  const saveNotes = () => localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  const noteOf = id => notes[id] || { status: '보류', memo: '' };
+
+  const posts = (DATA.posts || []).map(p => ({ ...p, _date: p.date ? new Date(p.date) : null }));
+  const now = new Date();
+  const daysAgo = d => d ? (now - d) / 86400000 : Infinity;
+
+  document.getElementById('meta').textContent =
+    `게시물 ${posts.length}개 · 마지막 수집 ${DATA.updatedAt ? new Date(DATA.updatedAt).toLocaleString('ko-KR') : '없음'}`;
+
+  // filter options
+  const uniq = arr => [...new Set(arr)].filter(Boolean).sort();
+  const allTools = uniq(posts.flatMap(p => p.tools || []));
+  const allTypes = uniq(posts.flatMap(p => p.types || []));
+  const fTool = document.getElementById('fTool'), fType = document.getElementById('fType');
+  allTools.forEach(t => fTool.add(new Option(t, t)));
+  allTypes.forEach(t => fType.add(new Option(t, t)));
+
+  // trend chips (keywords from last 7 days weighted by score)
+  const kwScore = {};
+  posts.filter(p => daysAgo(p._date) <= 7 || !p._date).forEach(p => {
+    [...(p.keywords || []), ...(p.tools || [])].forEach(k => { kwScore[k] = (kwScore[k] || 0) + 1 + (p.score || 0) / 100; });
+  });
+  const chipsEl = document.getElementById('trendChips');
+  const topKw = Object.entries(kwScore).sort((a,b) => b[1]-a[1]).slice(0, 15);
+  if (!topKw.length) chipsEl.innerHTML = '<span style="color:var(--muted);font-size:13px">아직 데이터 없음</span>';
+  topKw.forEach(([k, v]) => {
+    const c = document.createElement('span'); c.className = 'chip';
+    c.innerHTML = `${k}<small>${Math.round(v)}</small>`;
+    c.onclick = () => { document.getElementById('q').value = k; render(); };
+    chipsEl.appendChild(c);
+  });
+
+  // top5
+  const top5 = [...posts].sort((a,b) => (b.score||0)-(a.score||0)).slice(0,5);
+  document.getElementById('top5').innerHTML = top5.length ? top5.map((p,i) =>
+    `<li><span class="rank">${i+1}</span><div><a href="${p.url}" target="_blank" style="color:var(--text);text-decoration:none">${esc(p.summary || p.caption || '').slice(0,70)}</a><div style="color:var(--muted);font-size:11px">@${esc(p.account||'')} · <span class="score">${fmt(p.score)}</span></div></div></li>`
+  ).join('') : '<li style="color:var(--muted)">데이터 없음</li>';
+
+  // tool bars (30d)
+  const toolCount = {};
+  posts.filter(p => daysAgo(p._date) <= 30 || !p._date).forEach(p => (p.tools||[]).forEach(t => toolCount[t] = (toolCount[t]||0)+1));
+  const tc = Object.entries(toolCount).sort((a,b)=>b[1]-a[1]);
+  const maxTc = tc[0]?.[1] || 1;
+  document.getElementById('toolBars').innerHTML = tc.length ? tc.map(([t,n]) =>
+    `<div class="bar"><span>${esc(t)}</span><div class="track"><div class="fill" style="width:${n/maxTc*100}%"></div></div><span>${n}</span></div>`).join('')
+    : '<span style="color:var(--muted);font-size:13px">데이터 없음</span>';
+
+  function renderQueues() {
+    const q = posts.filter(p => noteOf(p.id).status === '시도중');
+    const d = posts.filter(p => noteOf(p.id).status === '적용완료');
+    const li = p => `<li><a href="${p.url}" target="_blank">@${esc(p.account||'')}</a> · ${esc((p.summary||p.caption||'').slice(0,60))}${noteOf(p.id).memo ? `<div style="color:var(--muted);font-size:12px;margin-top:2px">메모: ${esc(noteOf(p.id).memo)}</div>` : ''}</li>`;
+    document.getElementById('queue').innerHTML = q.length ? q.map(li).join('') : '<li style="color:var(--muted)">카드에서 상태를 "시도중"으로 바꾸면 여기 쌓여요</li>';
+    document.getElementById('done').innerHTML = d.length ? d.map(li).join('') : '<li style="color:var(--muted)">아직 없음</li>';
+  }
+
+  function render() {
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    const tool = fTool.value, type = fType.value, status = document.getElementById('fStatus').value;
+    const period = document.getElementById('fPeriod').value, sort = document.getElementById('sort').value;
+    let list = posts.filter(p => {
+      if (tool && !(p.tools||[]).includes(tool)) return false;
+      if (type && !(p.types||[]).includes(type)) return false;
+      if (status && noteOf(p.id).status !== status) return false;
+      if (period && daysAgo(p._date) > +period) return false;
+      if (q) {
+        const hay = [p.caption, p.summary, p.account, ...(p.keywords||[]), ...(p.tools||[])].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    list.sort((a,b) => sort === 'date' ? (b._date||0)-(a._date||0) : sort === 'likes' ? (b.likes||0)-(a.likes||0) : (b.score||0)-(a.score||0));
+    const feed = document.getElementById('feed');
+    if (!posts.length) {
+      feed.innerHTML = `<div class="empty" style="grid-column:1/-1">아직 수집된 게시물이 없어요.<br>인스타에서 <code>AI자동화</code> 컬렉션에 게시물을 저장하면<br>매일 09:00 루틴이 여기로 가져옵니다.</div>`;
+      return;
+    }
+    if (!list.length) { feed.innerHTML = `<div class="empty" style="grid-column:1/-1">필터 조건에 맞는 게시물이 없어요.</div>`; return; }
+    feed.innerHTML = list.map(p => {
+      const n = noteOf(p.id);
+      return `<div class="card" data-id="${p.id}">
+        <div class="top"><span class="acct">@${esc(p.account||'?')}</span><span>${p._date ? p._date.toLocaleDateString('ko-KR') : ''} · ${p.source||''}</span></div>
+        <div class="summary">${esc(p.summary || (p.caption||'').slice(0,120))}</div>
+        <div class="tags">${(p.tools||[]).map(t=>`<span class="tag tool">${esc(t)}</span>`).join('')}${(p.types||[]).map(t=>`<span class="tag type">${esc(t)}</span>`).join('')}${(p.keywords||[]).slice(0,4).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+        <div class="stats"><span>♥ ${fmt(p.likes)}</span><span>💬 ${fmt(p.comments)}</span><span>점수 <span class="score">${fmt(p.score)}</span></span><a href="${p.url}" target="_blank" style="margin-left:auto;color:var(--accent)">열기</a></div>
+        ${(p.checklist||[]).length ? `<details><summary style="font-size:12px;color:var(--muted);cursor:pointer">따라하기 체크리스트 (${p.checklist.length})</summary><ol class="checklist">${p.checklist.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : ''}
+        <div class="caption">${esc(p.caption||'')}</div>
+        <div class="actions">
+          <span class="status ${n.status}">${n.status}</span>
+          <select class="setStatus"><option ${n.status==='보류'?'selected':''}>보류</option><option ${n.status==='시도중'?'selected':''}>시도중</option><option ${n.status==='적용완료'?'selected':''}>적용완료</option></select>
+          <button class="toggleCap" style="margin-left:auto">캡션</button>
+        </div>
+        <textarea class="memo" placeholder="내 워크플로우에 어떻게 적용할까?">${esc(n.memo)}</textarea>
+      </div>`;
+    }).join('');
+    feed.querySelectorAll('.card').forEach(card => {
+      const id = card.dataset.id;
+      card.querySelector('.setStatus').onchange = e => { notes[id] = { ...noteOf(id), status: e.target.value }; saveNotes(); render(); renderQueues(); };
+      card.querySelector('.memo').onblur = e => { notes[id] = { ...noteOf(id), memo: e.target.value }; saveNotes(); renderQueues(); };
+      card.querySelector('.toggleCap').onclick = () => card.classList.toggle('open');
+    });
+  }
+  ['q','fTool','fType','fStatus','fPeriod','sort'].forEach(id => document.getElementById(id).addEventListener('input', render));
+  render(); renderQueues();
+
+  document.getElementById('exportNotes').onclick = () => {
+    const blob = new Blob([JSON.stringify(notes, null, 2)], { type:'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ig-dashboard-notes.json'; a.click();
+  };
+  document.getElementById('importNotes').onclick = () => document.getElementById('importFile').click();
+  document.getElementById('importFile').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { notes = { ...notes, ...JSON.parse(await f.text()) }; saveNotes(); render(); renderQueues(); } catch(err) { alert('JSON 파싱 실패'); }
+  };
+
+  function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmt(n) { if (n == null) return '-'; n = +n; return n >= 10000 ? (n/10000).toFixed(1)+'만' : n >= 1000 ? (n/1000).toFixed(1)+'k' : String(Math.round(n)); }
+};
+if (window.IG_DATA) window.bootDashboard();
+</script>
+</body>
+</html>
