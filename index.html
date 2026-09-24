@@ -95,10 +95,10 @@
       <div class="chips" id="trendChips" style="margin-top:12px"></div>
     </section>
     <section class="panel">
-      <h2>아이디어 피드 · 인스타 + GitHub 트렌딩 (댓글/팔로우 없이 직접 구현하는 가이드 포함)</h2>
+      <h2>아이디어 피드 · 인스타 + GitHub + YouTube (댓글/팔로우 없이 직접 구현하는 가이드 포함)</h2>
       <div class="filters">
         <input type="search" id="q" placeholder="검색 (아이디어/캡션/계정/키워드)">
-        <select id="fSource"><option value="">소스 전체</option><option value="saved">인스타(저장)</option><option value="creator">인스타(크리에이터)</option><option value="github">GitHub</option></select>
+        <select id="fSource"><option value="">소스 전체</option><option value="saved">인스타(저장)</option><option value="creator">인스타(크리에이터)</option><option value="github">GitHub</option><option value="youtube">YouTube</option></select>
         <select id="fVerdict"><option value="">판정 전체</option><option>실용</option><option>흥미</option><option>비현실</option></select>
         <select id="fTool"><option value="">툴 전체</option></select>
         <select id="fType"><option value="">유형 전체</option></select>
@@ -179,7 +179,7 @@ window.bootDashboard = function(){
   const daysAgo = d => d ? (now - d) / 86400000 : Infinity;
 
   document.getElementById('meta').textContent =
-    `인스타 ${posts.filter(p=>p.source!=='github').length}개 · GitHub ${posts.filter(p=>p.source==='github').length}개 · 마지막 수집 ${DATA.updatedAt ? new Date(DATA.updatedAt).toLocaleString('ko-KR') : '없음'} · 점수는 Aside가 직접 분석한 실용 점수(10점)`;
+    `인스타 ${posts.filter(p=>!['github','youtube'].includes(p.source)).length}개 · GitHub ${posts.filter(p=>p.source==='github').length}개 · YouTube ${posts.filter(p=>p.source==='youtube').length}개 · 마지막 수집 ${DATA.updatedAt ? new Date(DATA.updatedAt).toLocaleString('ko-KR') : '없음'} · 점수는 Aside가 직접 분석한 실용 점수(10점)`;
 
   const cnt = v => posts.filter(p => verdict(p) === v).length;
   document.getElementById('dist').innerHTML = [['실용', 'var(--green)'], ['흥미', 'var(--amber)'], ['비현실', 'var(--red)']].map(([v, c]) =>
@@ -215,11 +215,11 @@ window.bootDashboard = function(){
   function renderSide() {
     const top3 = posts.filter(p => p._a && noteOf(p.id).status !== '적용완료').sort((a,b) => applyScore(b)-applyScore(a)).slice(0,3);
     document.getElementById('top3').innerHTML = top3.length ? top3.map(p =>
-      `<li><div class="t">${esc(p._a.idea)}</div><div class="s"><b>${p._a.score}</b>/10 · ${p.source==='github' ? esc(p.repo||'') : '@'+esc(p.account||'')} · 첫 단계: ${esc((p._a.guide||[])[0]||'')}</div></li>`).join('')
+      `<li><div class="t">${esc(p._a.idea)}</div><div class="s"><b>${p._a.score}</b>/10 · ${p.source==='github' ? esc(p.repo||'') : p.source==='youtube' ? '▶ '+esc(p.account||'') : '@'+esc(p.account||'')} · 첫 단계: ${esc((p._a.guide||[])[0]||'')}</div></li>`).join('')
       : '<li style="color:var(--muted)">분석된 아이디어 없음</li>';
     const q = posts.filter(p => noteOf(p.id).status === '시도중');
     const d = posts.filter(p => noteOf(p.id).status === '적용완료');
-    const li = p => `<li><a href="${p.url}" target="_blank">${p.source==='github' ? esc(p.repo||'') : '@'+esc(p.account||'')}</a> · ${esc((p._a?.idea||p.summary||'').slice(0,60))}${noteOf(p.id).memo ? `<div style="color:var(--muted);font-size:12px;margin-top:2px">메모: ${esc(noteOf(p.id).memo)}</div>` : ''}</li>`;
+    const li = p => `<li><a href="${p.url}" target="_blank">${p.source==='github' ? esc(p.repo||'') : p.source==='youtube' ? '▶ '+esc(p.account||'') : '@'+esc(p.account||'')}</a> · ${esc((p._a?.idea||p.summary||'').slice(0,60))}${noteOf(p.id).memo ? `<div style="color:var(--muted);font-size:12px;margin-top:2px">메모: ${esc(noteOf(p.id).memo)}</div>` : ''}</li>`;
     document.getElementById('queue').innerHTML = q.length ? q.map(li).join('') : '<li style="color:var(--muted)">카드에서 상태를 "시도중"으로 바꾸면 여기 쌓여요</li>';
     document.getElementById('done').innerHTML = d.length ? d.map(li).join('') : '<li style="color:var(--muted)">아직 없음</li>';
   }
@@ -227,7 +227,8 @@ window.bootDashboard = function(){
   function card(p) {
     const n = noteOf(p.id), a = p._a;
     return `<div class="card ${a && a.verdict === '비현실' ? 'dim' : ''}" data-id="${p.id}">
-      <div class="top"><span class="acct">${p.source==='github' ? esc(p.repo||p.account) : '@'+esc(p.account||'?')}</span><span>${p.source==='github' ? `GitHub · ${esc(p.lang||'')} · ${p.created ? p.created.slice(0,7)+' 시작' : ''}` : `${p._date ? p._date.toLocaleDateString('ko-KR') : ''} · 인스타`}</span></div>
+      <div class="top"><span class="acct">${p.source==='github' ? esc(p.repo||p.account) : p.source==='youtube' ? '▶ '+esc(p.account||'') : '@'+esc(p.account||'?')}</span><span>${p.source==='github' ? `GitHub · ${esc(p.lang||'')} · ${p.created ? p.created.slice(0,7)+' 시작' : ''}` : p.source==='youtube' ? `YouTube · ${p._date ? p._date.toLocaleDateString('ko-KR') : ''} · ${p.ytMinutes||'?'}분` : `${p._date ? p._date.toLocaleDateString('ko-KR') : ''} · 인스타`}</span></div>
+      ${p.source==='youtube' ? `<div class="summary" style="color:var(--text)">${esc(p.title||'')}</div>` : ''}
       ${a ? `<div class="scorebox"><span class="bigscore ${a.verdict}">${a.score}</span><span style="color:var(--muted);font-size:12px">/10</span><span class="verdict ${a.verdict}">${a.verdict}</span></div>` : ''}
       <div class="idea">${esc(a ? a.idea : (p.summary || (p.caption||'').slice(0,120)))}</div>
       ${a ? `<div class="summary">${esc(p.summary||'')}</div>` : ''}
@@ -236,7 +237,7 @@ window.bootDashboard = function(){
       ${a && a.gate ? `<div class="gate">✓ ${esc(a.gate)}</div>` : ''}
       ${a && (a.guide||[]).length ? `<details class="guide" ${a.verdict==='실용' ? 'open' : ''}><summary>직접 구현 가이드 (${a.guide.length}단계)</summary><ol>${a.guide.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : (p.checklist||[]).length ? `<details class="guide"><summary>체크리스트 (${p.checklist.length})</summary><ol>${p.checklist.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : ''}
       <div class="tags">${(p.tools||[]).map(t=>`<span class="tag tool">${esc(t)}</span>`).join('')}${(p.types||[]).map(t=>`<span class="tag type">${esc(t)}</span>`).join('')}${(p.keywords||[]).slice(0,4).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
-      <div class="stats">${p.source==='github' ? `<span>★ ${fmt(p.ghStars)}</span><span style="color:var(--green)">+${fmt(p.ghDelta)} ${p.ghPeriod==='daily'?'오늘':p.ghPeriod==='monthly'?'이달':'이번 주'}</span>${p.license?`<span>${esc(p.license)}</span>`:''}` : `<span>♥ ${fmt(p.likes)}</span><span>💬 ${fmt(p.comments)}</span><span>인기 ${fmt(p.score)}</span>`}<a href="${p.url}" target="_blank" style="margin-left:auto;color:var(--accent)">${p.source==='github'?'저장소':'원문'}</a></div>
+      <div class="stats">${p.source==='github' ? `<span>★ ${fmt(p.ghStars)}</span><span style="color:var(--green)">+${fmt(p.ghDelta)} ${p.ghPeriod==='daily'?'오늘':p.ghPeriod==='monthly'?'이달':'이번 주'}</span>${p.license?`<span>${esc(p.license)}</span>`:''}` : p.source==='youtube' ? `<span>▶ ${fmt(p.ytViews)}회</span>` : `<span>♥ ${fmt(p.likes)}</span><span>💬 ${fmt(p.comments)}</span><span>인기 ${fmt(p.score)}</span>`}<a href="${p.url}" target="_blank" style="margin-left:auto;color:var(--accent)">${p.source==='github'?'저장소':p.source==='youtube'?'영상':'원문'}</a></div>
       <div class="caption">${esc(p.caption||'')}</div>
       <div class="actions">
         <span class="status ${n.status}">${n.status}</span>
@@ -269,7 +270,7 @@ window.bootDashboard = function(){
       if (status && noteOf(p.id).status !== status) return false;
       if (period && daysAgo(p._date) > +period) return false;
       if (q) {
-        const hay = [p.caption, p.summary, p.account, p.repo, p._a?.idea, p._a?.why, ...(p.keywords||[]), ...(p.tools||[])].join(' ').toLowerCase();
+        const hay = [p.caption, p.summary, p.account, p.repo, p.title, p._a?.idea, p._a?.why, ...(p.keywords||[]), ...(p.tools||[])].join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
