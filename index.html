@@ -36,6 +36,7 @@
   .tag { font-size:11px; padding:2px 7px; border-radius:6px; background:#262b38; color:#c9cfdd; }
   .tag.tool { background:#2a3352; color:#a9bbff; }
   .tag.type { background:#2b3a31; color:#8fe0b6; }
+  .tag.topic { background:#3a2e4a; color:#d9b8ff; font-weight:600; }
   .card .stats { font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; }
   .scorebox { display:flex; align-items:center; gap:8px; }
   .bigscore { font-size:22px; font-weight:800; }
@@ -95,10 +96,11 @@
       <div class="chips" id="trendChips" style="margin-top:12px"></div>
     </section>
     <section class="panel">
-      <h2>아이디어 피드 · 인스타 + GitHub + YouTube (댓글/팔로우 없이 직접 구현하는 가이드 포함)</h2>
+      <h2>아이디어 피드 · 주제: AI 자동화 / Claude·스킬·MCP / 에이전트 / Jev / AI 주식매매 (댓글/팔로우 없이 직접 구현하는 가이드 포함)</h2>
       <div class="filters">
         <input type="search" id="q" placeholder="검색 (아이디어/캡션/계정/키워드)">
-        <select id="fSource"><option value="">소스 전체</option><option value="saved">인스타(저장)</option><option value="creator">인스타(크리에이터)</option><option value="github">GitHub</option><option value="youtube">YouTube</option></select>
+        <select id="fTopic"><option value="">주제 전체</option></select>
+        <select id="fSource"><option value="">소스 전체</option><option value="saved">인스타(저장)</option><option value="creator">인스타(크리에이터)</option><option value="discover">인스타(해시태그/검색)</option><option value="github">GitHub</option><option value="youtube">YouTube</option></select>
         <select id="fVerdict"><option value="">판정 전체</option><option>실용</option><option>흥미</option><option>비현실</option></select>
         <select id="fTool"><option value="">툴 전체</option></select>
         <select id="fType"><option value="">유형 전체</option></select>
@@ -186,7 +188,8 @@ window.bootDashboard = function(){
     `<div><div class="n" style="color:${c}">${cnt(v)}</div><div class="l">${v}</div></div>`).join('');
 
   const uniq = arr => [...new Set(arr)].filter(Boolean).sort();
-  const fTool = document.getElementById('fTool'), fType = document.getElementById('fType');
+  const fTool = document.getElementById('fTool'), fType = document.getElementById('fType'), fTopic = document.getElementById('fTopic');
+  uniq(posts.flatMap(p => p.topics || [])).forEach(t => fTopic.add(new Option(`${t} (${posts.filter(p=>(p.topics||[]).includes(t)).length})`, t)));
   uniq(posts.flatMap(p => p.tools || [])).forEach(t => fTool.add(new Option(t, t)));
   uniq(posts.flatMap(p => p.types || [])).forEach(t => fType.add(new Option(t, t)));
 
@@ -236,7 +239,7 @@ window.bootDashboard = function(){
       ${a ? `<div class="why">${esc(a.why)}</div>` : ''}
       ${a && a.gate ? `<div class="gate">✓ ${esc(a.gate)}</div>` : ''}
       ${a && (a.guide||[]).length ? `<details class="guide" ${a.verdict==='실용' ? 'open' : ''}><summary>직접 구현 가이드 (${a.guide.length}단계)</summary><ol>${a.guide.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : (p.checklist||[]).length ? `<details class="guide"><summary>체크리스트 (${p.checklist.length})</summary><ol>${p.checklist.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : ''}
-      <div class="tags">${(p.tools||[]).map(t=>`<span class="tag tool">${esc(t)}</span>`).join('')}${(p.types||[]).map(t=>`<span class="tag type">${esc(t)}</span>`).join('')}${(p.keywords||[]).slice(0,4).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+      <div class="tags">${(p.topics||[]).map(t=>`<span class="tag topic">${esc(t)}</span>`).join('')}${(p.tools||[]).map(t=>`<span class="tag tool">${esc(t)}</span>`).join('')}${(p.types||[]).map(t=>`<span class="tag type">${esc(t)}</span>`).join('')}${(p.keywords||[]).slice(0,4).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
       <div class="stats">${p.source==='github' ? `<span>★ ${fmt(p.ghStars)}</span><span style="color:var(--green)">+${fmt(p.ghDelta)} ${p.ghPeriod==='daily'?'오늘':p.ghPeriod==='monthly'?'이달':'이번 주'}</span>${p.license?`<span>${esc(p.license)}</span>`:''}` : p.source==='youtube' ? `<span>▶ ${fmt(p.ytViews)}회</span>` : `<span>♥ ${fmt(p.likes)}</span><span>💬 ${fmt(p.comments)}</span><span>인기 ${fmt(p.score)}</span>`}<a href="${p.url}" target="_blank" style="margin-left:auto;color:var(--accent)">${p.source==='github'?'저장소':p.source==='youtube'?'영상':'원문'}</a></div>
       <div class="caption">${esc(p.caption||'')}</div>
       <div class="actions">
@@ -259,18 +262,19 @@ window.bootDashboard = function(){
 
   function render() {
     const q = document.getElementById('q').value.trim().toLowerCase();
-    const fs_ = document.getElementById('fSource').value;
+    const fs_ = document.getElementById('fSource').value, ft_ = fTopic.value;
     const fv = document.getElementById('fVerdict').value, tool = fTool.value, type = fType.value, status = document.getElementById('fStatus').value;
     const period = document.getElementById('fPeriod').value, sort = document.getElementById('sort').value;
     let list = posts.filter(p => {
       if (fv && verdict(p) !== fv) return false;
       if (fs_ && (p.source||'') !== fs_) return false;
+      if (ft_ && !(p.topics||[]).includes(ft_)) return false;
       if (tool && !(p.tools||[]).includes(tool)) return false;
       if (type && !(p.types||[]).includes(type)) return false;
       if (status && noteOf(p.id).status !== status) return false;
       if (period && daysAgo(p._date) > +period) return false;
       if (q) {
-        const hay = [p.caption, p.summary, p.account, p.repo, p.title, p._a?.idea, p._a?.why, ...(p.keywords||[]), ...(p.tools||[])].join(' ').toLowerCase();
+        const hay = [p.caption, p.summary, p.account, p.repo, p.title, ...(p.topics||[]), p._a?.idea, p._a?.why, ...(p.keywords||[]), ...(p.tools||[])].join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -289,7 +293,7 @@ window.bootDashboard = function(){
     if (lowList.length) { lz.style.display = ''; document.getElementById('lowzoneSummary').textContent = `비현실 / 참고만 (${lowList.length}) 펼치기`; low.innerHTML = lowList.map(card).join(''); bind(low); }
     else lz.style.display = 'none';
   }
-  ['q','fSource','fVerdict','fTool','fType','fStatus','fPeriod','sort'].forEach(id => document.getElementById(id).addEventListener('input', render));
+  ['q','fTopic','fSource','fVerdict','fTool','fType','fStatus','fPeriod','sort'].forEach(id => document.getElementById(id).addEventListener('input', render));
   render(); renderSide();
 
   document.getElementById('exportNotes').onclick = () => {
