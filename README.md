@@ -3,4 +3,4 @@
 Encrypted Instagram AI-automation / Jev trend dashboard published via GitHub Pages.
 Data is AES-256-GCM encrypted; a password is required to view.
 
-Updated: 2026-09-27T01:05:46.112Z
+Updated: 2026-09-28T00:14:56.498Z
