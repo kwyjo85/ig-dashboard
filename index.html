@@ -80,6 +80,22 @@
   .dist div { flex:1; text-align:center; padding:10px 6px; border-radius:10px; background:#141720; }
   .dist .n { font-size:20px; font-weight:800; }
   .dist .l { font-size:11px; color:var(--muted); }
+  .mkt { font-size:12px; line-height:1.55; background:#171c26; border:1px solid var(--line); padding:8px 10px; border-radius:8px; color:#dfe3ec; }
+  .mkt b { color:#ffd27a; }
+  .mkt ul { margin:4px 0 6px; padding-left:18px; }
+  .mkt .row { margin-top:3px; }
+  .mkt .trig span { display:inline-block; font-size:11px; background:#3a3320; color:var(--amber); border-radius:6px; padding:1px 6px; margin:2px 3px 0 0; }
+  details.mktd summary { font-size:12px; color:#ffd27a; cursor:pointer; font-weight:600; }
+  .pack { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap:12px; }
+  .pitem { background:#1c2029; border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .pitem.done { opacity:.55; }
+  .pitem .ch { font-size:11px; font-weight:700; color:#0b0d12; background:#d9b8ff; border-radius:999px; padding:2px 8px; align-self:flex-start; }
+  .pitem .pt { font-size:14px; font-weight:700; }
+  .pitem pre { white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; background:#141720; border-radius:8px; padding:10px; margin:0; color:#eef0f5; }
+  .pitem .pw { font-size:12px; color:var(--muted); line-height:1.5; }
+  .pitem .pa { display:flex; gap:6px; }
+  .report li { font-size:13px; line-height:1.6; margin-bottom:6px; }
+  .report b { color:#ffd27a; }
 </style>
 </head>
 <body>
@@ -95,6 +111,10 @@
   </div>
 </header>
 <main>
+  <div style="grid-column:1/-1" id="topPanels">
+    <section class="panel" id="packPanel" style="display:none"><h2 id="packTitle">이번 주 콘텐츠 팩</h2><div class="pw" id="packIntro" style="font-size:13px;color:var(--muted);margin-bottom:10px"></div><div class="pack" id="pack"></div></section>
+    <section class="panel report" id="reportPanel" style="display:none"><h2 id="reportTitle">트렌드 리포트</h2><div id="report"></div></section>
+  </div>
   <div>
     <section class="panel">
       <h2>판정 분포 · 트렌드 키워드</h2>
@@ -245,6 +265,7 @@ window.bootDashboard = function(){
       ${a ? `<div class="subscores"><span>실현 <b>${a.feasibility}</b></span><span>효과 <b>${a.impact}</b></span><span>난이도 <b>${a.effort}</b></span><span>과장 <b>${a.hype}</b></span></div>` : ''}
       ${a ? `<div class="why">${esc(a.why)}</div>` : ''}
       ${a && a.promo && a.promo.angle && a.promo.angle !== '참고만' ? `<div class="promo"><b>홍보 활용</b> · ${esc(a.promo.angle)}${a.promo.audience && a.promo.audience !== '-' ? ' · 대상: '+esc(a.promo.audience) : ''}${a.promo.hook && !/^\(|^-$/.test(a.promo.hook) ? `<div class="hook">${esc(a.promo.hook)}</div>` : ''}${a.promo.caution && a.promo.caution !== '-' ? `<div>주의: ${esc(a.promo.caution)}</div>` : ''}</div>` : ''}
+      ${a && a.marketing ? `<div class="mkt">${(a.marketing.keypoints||[]).length ? `<b>원문 핵심</b><ul>${a.marketing.keypoints.map(k=>`<li>${esc(k)}</li>`).join('')}</ul>` : ''}<details class="mktd" ${(p.topics||[]).includes('코딩 교육') ? 'open' : ''}><summary>마케팅 기법 분석</summary>${a.marketing.hook ? `<div class="row"><b>첫 줄</b> ${esc(a.marketing.hook)}</div>` : ''}${a.marketing.structure ? `<div class="row"><b>구조</b> ${esc(a.marketing.structure)}</div>` : ''}${a.marketing.cta ? `<div class="row"><b>행동 유도</b> ${esc(a.marketing.cta)}</div>` : ''}${(a.marketing.triggers||[]).length ? `<div class="row trig"><b>반응 요인</b> ${a.marketing.triggers.map(t=>`<span>${esc(t)}</span>`).join('')}</div>` : ''}${a.marketing.engagement ? `<div class="row"><b>반응 해석</b> ${esc(a.marketing.engagement)}</div>` : ''}${a.marketing.why ? `<div class="row"><b>왜 통했나</b> ${esc(a.marketing.why)}</div>` : ''}${a.marketing.borrow ? `<div class="row"><b>가져올 점</b> ${esc(a.marketing.borrow)}</div>` : ''}${a.marketing.risk && a.marketing.risk !== '-' ? `<div class="row"><b>주의</b> ${esc(a.marketing.risk)}</div>` : ''}</details></div>` : ''}
       ${a && a.essay ? `<div class="essay"><b>에세이 초안 연결</b> · ${esc(a.essay.draft||'')}${a.essay.learn && a.essay.learn !== '-' ? `<div>배울 점: ${esc(a.essay.learn)}</div>` : ''}${a.essay.avoid && a.essay.avoid !== '-' ? `<div>피할 점: ${esc(a.essay.avoid)}</div>` : ''}</div>` : ''}
       ${a && a.fact ? `<div class="fact">ⓘ ${esc(a.fact)}</div>` : ''}
       ${a && a.gate ? `<div class="gate">✓ ${esc(a.gate)}</div>` : ''}
@@ -307,6 +328,29 @@ window.bootDashboard = function(){
   if (qsTopic && [...fTopic.options].some(o => o.value === qsTopic)) fTopic.value = qsTopic;
   ['q','fTopic','fSource','fVerdict','fTool','fType','fStatus','fPeriod','sort'].forEach(id => document.getElementById(id).addEventListener('input', render));
   document.getElementById('fTopic').addEventListener('input', renderSide);
+  const DONE_KEY = (window.SITE_KEY || 'ig-dashboard') + '-pack-done';
+  let packDone = {}; try { packDone = JSON.parse(localStorage.getItem(DONE_KEY) || '{}'); } catch(e) {}
+  function renderTop() {
+    const pk = (DATA.packs || [])[0];
+    if (pk) {
+      document.getElementById('packPanel').style.display = '';
+      document.getElementById('packTitle').textContent = pk.title || '이번 주 콘텐츠 팩';
+      document.getElementById('packIntro').textContent = pk.intro || '';
+      document.getElementById('pack').innerHTML = (pk.items||[]).map(it => `<div class="pitem ${packDone[it.id] ? 'done' : ''}" data-id="${it.id}"><span class="ch">${esc(it.channel)} · ${esc(it.when||'')}</span><div class="pt">${esc(it.title)}</div>${it.draft && it.draft !== '-' ? `<div class="pw">초안: ${esc(it.draft)}</div>` : ''}<pre>${esc(it.body)}</pre>${it.why ? `<div class="pw">왜 이렇게: ${esc(it.why)}</div>` : ''}<div class="pa"><button class="cp">복사</button><button class="dn">${packDone[it.id] ? '올림 취소' : '올림 완료'}</button></div></div>`).join('');
+      document.querySelectorAll('.pitem').forEach(el => {
+        const it = pk.items.find(x => x.id === el.dataset.id);
+        el.querySelector('.cp').onclick = async () => { try { await navigator.clipboard.writeText(it.body); el.querySelector('.cp').textContent = '복사됨'; } catch(e) { alert('복사가 안 되면 글을 길게 눌러 복사해주세요'); } };
+        el.querySelector('.dn').onclick = () => { packDone[it.id] = !packDone[it.id]; localStorage.setItem(DONE_KEY, JSON.stringify(packDone)); renderTop(); };
+      });
+    }
+    const rp = DATA.report;
+    if (rp) {
+      document.getElementById('reportPanel').style.display = '';
+      document.getElementById('reportTitle').textContent = rp.title || '트렌드 리포트';
+      document.getElementById('report').innerHTML = (rp.sections||[]).map(s => `<div style="margin-bottom:10px"><div style="font-weight:700;margin-bottom:4px">${esc(s.h)}</div><ul style="margin:0;padding-left:18px">${(s.items||[]).map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('');
+    }
+  }
+  renderTop();
   render(); renderSide();
 
   document.getElementById('exportNotes').onclick = () => {
