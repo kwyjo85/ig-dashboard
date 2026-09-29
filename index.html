@@ -100,7 +100,7 @@
       <div class="chips" id="trendChips" style="margin-top:12px"></div>
     </section>
     <section class="panel">
-      <h2>아이디어 피드 · 주제: AI 자동화 / Claude·스킬·MCP / 에이전트 / AI 주식매매 (댓글/팔로우 없이 직접 구현하는 가이드 포함)</h2>
+      <h2>아이디어 피드 · 주제: AI 자동화 / Claude·스킬·MCP / 에이전트 / AI 주식매매 / 코딩 교육 (댓글/팔로우 없이 직접 활용하는 가이드 포함)</h2>
       <div class="filters">
         <input type="search" id="q" placeholder="검색 (아이디어/캡션/계정/키워드)">
         <select id="fTopic"><option value="">주제 전체</option></select>
@@ -220,7 +220,8 @@ window.bootDashboard = function(){
     : '<span style="color:var(--muted);font-size:13px">데이터 없음</span>';
 
   function renderSide() {
-    const top3 = posts.filter(p => p._a && noteOf(p.id).status !== '적용완료').sort((a,b) => applyScore(b)-applyScore(a)).slice(0,3);
+    const tSel = document.getElementById('fTopic')?.value || '';
+    const top3 = posts.filter(p => p._a && noteOf(p.id).status !== '적용완료' && (!tSel || (p.topics||[]).includes(tSel))).sort((a,b) => applyScore(b)-applyScore(a)).slice(0,3);
     document.getElementById('top3').innerHTML = top3.length ? top3.map(p =>
       `<li><div class="t">${esc(p._a.idea)}</div><div class="s"><b>${p._a.score}</b>/10 · ${p.source==='github' ? esc(p.repo||'') : p.source==='youtube' ? '▶ '+esc(p.account||'') : p.source==='threads' ? '스레드 @'+esc(p.account||'') : '@'+esc(p.account||'')} · 첫 단계: ${esc((p._a.guide||[])[0]||'')}</div></li>`).join('')
       : '<li style="color:var(--muted)">분석된 아이디어 없음</li>';
@@ -302,6 +303,7 @@ window.bootDashboard = function(){
   const qsTopic = new URLSearchParams(location.search).get('topic');
   if (qsTopic && [...fTopic.options].some(o => o.value === qsTopic)) fTopic.value = qsTopic;
   ['q','fTopic','fSource','fVerdict','fTool','fType','fStatus','fPeriod','sort'].forEach(id => document.getElementById(id).addEventListener('input', render));
+  document.getElementById('fTopic').addEventListener('input', renderSide);
   render(); renderSide();
 
   document.getElementById('exportNotes').onclick = () => {
