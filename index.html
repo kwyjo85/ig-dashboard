@@ -47,6 +47,10 @@
   .subscores span b { color:var(--text); }
   .why { font-size:12px; line-height:1.5; color:#c9cfdd; background:#141720; border-left:3px solid var(--accent); padding:8px 10px; border-radius:6px; }
   .gate { font-size:11px; color:var(--green); }
+  .promo { font-size:12px; line-height:1.5; background:#2a2233; border-left:3px solid #d9b8ff; padding:8px 10px; border-radius:6px; color:#eadcff; }
+  .promo b { color:#d9b8ff; }
+  .promo .hook { font-size:13px; font-weight:700; color:#fff; margin:4px 0; }
+  .fact { font-size:11px; color:var(--amber); }
   details.guide summary { font-size:12px; color:var(--accent); cursor:pointer; font-weight:600; }
   .guide ol { font-size:12px; color:#dfe3ec; padding-left:18px; margin:6px 0 0; line-height:1.55; }
   .card .actions { display:flex; gap:6px; align-items:center; margin-top:4px; }
@@ -237,8 +241,10 @@ window.bootDashboard = function(){
       ${a ? `<div class="summary">${esc(p.summary||'')}</div>` : ''}
       ${a ? `<div class="subscores"><span>실현 <b>${a.feasibility}</b></span><span>효과 <b>${a.impact}</b></span><span>난이도 <b>${a.effort}</b></span><span>과장 <b>${a.hype}</b></span></div>` : ''}
       ${a ? `<div class="why">${esc(a.why)}</div>` : ''}
+      ${a && a.promo && a.promo.angle && a.promo.angle !== '참고만' ? `<div class="promo"><b>홍보 활용</b> · ${esc(a.promo.angle)}${a.promo.audience && a.promo.audience !== '-' ? ' · 대상: '+esc(a.promo.audience) : ''}${a.promo.hook && !/^\(|^-$/.test(a.promo.hook) ? `<div class="hook">${esc(a.promo.hook)}</div>` : ''}${a.promo.caution && a.promo.caution !== '-' ? `<div>주의: ${esc(a.promo.caution)}</div>` : ''}</div>` : ''}
+      ${a && a.fact ? `<div class="fact">ⓘ ${esc(a.fact)}</div>` : ''}
       ${a && a.gate ? `<div class="gate">✓ ${esc(a.gate)}</div>` : ''}
-      ${a && (a.guide||[]).length ? `<details class="guide" ${a.verdict==='실용' ? 'open' : ''}><summary>직접 구현 가이드 (${a.guide.length}단계)</summary><ol>${a.guide.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : (p.checklist||[]).length ? `<details class="guide"><summary>체크리스트 (${p.checklist.length})</summary><ol>${p.checklist.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : ''}
+      ${a && (a.guide||[]).length ? `<details class="guide" ${a.verdict==='실용' ? 'open' : ''}><summary>${(p.topics||[]).includes('코딩 교육') ? '우리 학원 적용 방법' : '직접 구현 가이드'} (${a.guide.length}단계)</summary><ol>${a.guide.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : (p.checklist||[]).length ? `<details class="guide"><summary>체크리스트 (${p.checklist.length})</summary><ol>${p.checklist.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : ''}
       <div class="tags">${(p.topics||[]).map(t=>`<span class="tag topic">${esc(t)}</span>`).join('')}${(p.tools||[]).map(t=>`<span class="tag tool">${esc(t)}</span>`).join('')}${(p.types||[]).map(t=>`<span class="tag type">${esc(t)}</span>`).join('')}${(p.keywords||[]).slice(0,4).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
       <div class="stats">${p.source==='github' ? `<span>★ ${fmt(p.ghStars)}</span><span style="color:var(--green)">+${fmt(p.ghDelta)} ${p.ghPeriod==='daily'?'오늘':p.ghPeriod==='monthly'?'이달':'이번 주'}</span>${p.license?`<span>${esc(p.license)}</span>`:''}` : p.source==='youtube' ? `<span>▶ ${fmt(p.ytViews)}회</span>` : p.source==='threads' ? `<span>♥ ${fmt(p.likes)}</span><span>↩ ${fmt(p.comments)}</span><span>⟳ ${fmt(p.thReposts)}</span>` : `<span>♥ ${fmt(p.likes)}</span><span>💬 ${fmt(p.comments)}</span><span>인기 ${fmt(p.score)}</span>`}<a href="${p.url}" target="_blank" style="margin-left:auto;color:var(--accent)">${p.source==='github'?'저장소':p.source==='youtube'?'영상':'원문'}</a></div>
       <div class="caption">${esc(p.caption||'')}</div>
@@ -293,6 +299,8 @@ window.bootDashboard = function(){
     if (lowList.length) { lz.style.display = ''; document.getElementById('lowzoneSummary').textContent = `비현실 / 참고만 (${lowList.length}) 펼치기`; low.innerHTML = lowList.map(card).join(''); bind(low); }
     else lz.style.display = 'none';
   }
+  const qsTopic = new URLSearchParams(location.search).get('topic');
+  if (qsTopic && [...fTopic.options].some(o => o.value === qsTopic)) fTopic.value = qsTopic;
   ['q','fTopic','fSource','fVerdict','fTool','fType','fStatus','fPeriod','sort'].forEach(id => document.getElementById(id).addEventListener('input', render));
   render(); renderSide();
 
