@@ -15,6 +15,12 @@
   @media (max-width: 1000px) { main { grid-template-columns:1fr; padding:14px; } header { padding:14px; } }
   section.panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
   h2 { font-size:14px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  .tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .tabs button { padding:9px 16px; border-radius:10px; border:1px solid #2c3142; background:#1a1d27; color:var(--text); font-size:14px; font-weight:600; cursor:pointer; }
+  .tabs button.on { background:var(--accent); color:#fff; border-color:transparent; }
+  .tabs button small { font-weight:400; opacity:.8; margin-left:4px; }
+  .tabhint { font-size:12px; color:var(--muted); margin:-4px 0 12px; }
+  .minebadge { display:inline-block; font-size:11px; padding:2px 7px; border-radius:6px; background:#3b2f6b; color:#d9ccff; margin-right:6px; }
   .chips { display:flex; flex-wrap:wrap; gap:6px; }
   .chip { padding:4px 10px; border-radius:999px; background:#222634; font-size:12px; color:var(--text); border:1px solid transparent; cursor:pointer; }
   .chip small { color:var(--muted); margin-left:4px; }
@@ -123,6 +129,8 @@
     </section>
     <section class="panel">
       <h2>아이디어 피드 · 주제: AI 자동화 / Claude·스킬·MCP / 에이전트 (댓글/팔로우 없이 직접 활용하는 가이드 포함)</h2>
+      <div class="tabs" id="tabs"><button data-tab="mine" class="on">내가 저장한 자료 <small id="cMine"></small></button><button data-tab="found">Aside가 찾은 자료 <small id="cFound"></small></button><button data-tab="all">전체 <small id="cAll"></small></button></div>
+      <div class="tabhint" id="tabHint"></div>
       <div class="filters">
         <input type="search" id="q" placeholder="검색 (아이디어/캡션/계정/키워드)">
         <select id="fTopic"><option value="">주제 전체</option></select>
@@ -132,7 +140,7 @@
         <select id="fType"><option value="">유형 전체</option></select>
         <select id="fStatus"><option value="">상태 전체</option><option>보류</option><option>시도중</option><option>적용완료</option></select>
         <select id="fPeriod"><option value="">기간 전체</option><option value="7">최근 7일</option><option value="30">최근 30일</option></select>
-        <select id="sort"><option value="apply">실용 점수순</option><option value="score">인기(트렌드)순</option><option value="date">최신순</option></select>
+        <select id="sort"><option value="date">최신순</option><option value="apply">실용 점수순</option><option value="score">인기(트렌드)순</option></select>
       </div>
       <div class="grid" id="feed"></div>
       <details class="lowzone" id="lowzone"><summary id="lowzoneSummary"></summary><div class="grid" id="feedLow"></div></details>
@@ -202,6 +210,10 @@ window.bootDashboard = function(){
 
   const posts = (DATA.posts || []).map(p => ({ ...p, _date: p.date ? new Date(p.date) : null, _a: p.analysis || null }));
   const applyScore = p => p._a ? p._a.score : 0;
+  // 내가 저장한 자료: 인스타 저장 게시물 + Threads 저장됨
+  const isMine = p => (p.source === 'saved' && (!p.via || p.via === 'saved')) || (p.source === 'threads' && p.via === '저장됨');
+  const tsOf = p => Math.max(p.collectedAt ? Date.parse(p.collectedAt) || 0 : 0, 0) * 1e3 + ((p._date && +p._date) ? +p._date / 1e9 : 0);
+  let tab = 'mine';
   const verdict = p => p._a ? p._a.verdict : '미분석';
   const now = new Date();
   const daysAgo = d => d ? (now - d) / 86400000 : Infinity;
@@ -257,7 +269,7 @@ window.bootDashboard = function(){
   function card(p) {
     const n = noteOf(p.id), a = p._a;
     return `<div class="card ${a && a.verdict === '비현실' ? 'dim' : ''}" data-id="${p.id}">
-      <div class="top"><span class="acct">${p.source==='github' ? esc(p.repo||p.account) : p.source==='youtube' ? '▶ '+esc(p.account||'') : '@'+esc(p.account||'?')}</span><span>${p.source==='github' ? `GitHub · ${esc(p.lang||'')} · ${p.created ? p.created.slice(0,7)+' 시작' : ''}` : p.source==='youtube' ? `YouTube · ${p._date ? p._date.toLocaleDateString('ko-KR') : ''} · ${p.ytMinutes||'?'}분` : p.source==='threads' ? `Threads · ${p._date ? p._date.toLocaleDateString('ko-KR') : ''}${p.threadParts>1 ? ' · '+p.threadParts+'개 연결' : ''}${p.via ? ' · '+esc(p.via) : ''}` : `${p._date ? p._date.toLocaleDateString('ko-KR') : ''} · 인스타${p.via ? ' · '+esc(p.via) : ''}`}</span></div>
+      <div class="top"><span class="acct">${isMine(p) ? '<span class="minebadge">내 저장 · Aside 분석</span>' : ''}${p.source==='github' ? esc(p.repo||p.account) : p.source==='youtube' ? '▶ '+esc(p.account||'') : '@'+esc(p.account||'?')}</span><span>${p.source==='github' ? `GitHub · ${esc(p.lang||'')} · ${p.created ? p.created.slice(0,7)+' 시작' : ''}` : p.source==='youtube' ? `YouTube · ${p._date ? p._date.toLocaleDateString('ko-KR') : ''} · ${p.ytMinutes||'?'}분` : p.source==='threads' ? `Threads · ${p._date ? p._date.toLocaleDateString('ko-KR') : ''}${p.threadParts>1 ? ' · '+p.threadParts+'개 연결' : ''}${p.via ? ' · '+esc(p.via) : ''}` : `${p._date ? p._date.toLocaleDateString('ko-KR') : ''} · 인스타${p.via ? ' · '+esc(p.via) : ''}`}</span></div>
       ${p.source==='youtube' ? `<div class="summary" style="color:var(--text)">${esc(p.title||'')}</div>` : ''}
       ${a ? `<div class="scorebox"><span class="bigscore ${a.verdict}">${a.score}</span><span style="color:var(--muted);font-size:12px">/10</span><span class="verdict ${a.verdict}">${a.verdict}</span></div>` : ''}
       <div class="idea">${esc(a ? a.idea : (p.summary || (p.caption||'').slice(0,120)))}</div>
@@ -269,7 +281,7 @@ window.bootDashboard = function(){
       ${a && a.essay ? `<div class="essay"><b>에세이 초안 연결</b> · ${esc(a.essay.draft||'')}${a.essay.learn && a.essay.learn !== '-' ? `<div>배울 점: ${esc(a.essay.learn)}</div>` : ''}${a.essay.avoid && a.essay.avoid !== '-' ? `<div>피할 점: ${esc(a.essay.avoid)}</div>` : ''}</div>` : ''}
       ${a && a.fact ? `<div class="fact">ⓘ ${esc(a.fact)}</div>` : ''}
       ${a && a.gate ? `<div class="gate">✓ ${esc(a.gate)}</div>` : ''}
-      ${a && (a.guide||[]).length ? `<details class="guide" ${a.verdict==='실용' ? 'open' : ''}><summary>${(p.topics||[]).includes('코딩 교육') ? '우리 학원 적용 방법' : '직접 구현 가이드'} (${a.guide.length}단계)</summary><ol>${a.guide.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : (p.checklist||[]).length ? `<details class="guide"><summary>체크리스트 (${p.checklist.length})</summary><ol>${p.checklist.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : ''}
+      ${a && (a.guide||[]).length ? `<details class="guide" ${a.verdict==='실용' || isMine(p) ? 'open' : ''}><summary>${(p.topics||[]).includes('코딩 교육') ? '우리 학원 적용 방법' : '직접 구현 가이드'} (${a.guide.length}단계)</summary><ol>${a.guide.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : (p.checklist||[]).length ? `<details class="guide"><summary>체크리스트 (${p.checklist.length})</summary><ol>${p.checklist.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>` : ''}
       <div class="tags">${(p.topics||[]).map(t=>`<span class="tag topic">${esc(t)}</span>`).join('')}${(p.tools||[]).map(t=>`<span class="tag tool">${esc(t)}</span>`).join('')}${(p.types||[]).map(t=>`<span class="tag type">${esc(t)}</span>`).join('')}${(p.keywords||[]).slice(0,4).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
       <div class="stats">${p.source==='github' ? `<span>★ ${fmt(p.ghStars)}</span><span style="color:var(--green)">+${fmt(p.ghDelta)} ${p.ghPeriod==='daily'?'오늘':p.ghPeriod==='monthly'?'이달':'이번 주'}</span>${p.license?`<span>${esc(p.license)}</span>`:''}` : p.source==='youtube' ? `<span>▶ ${fmt(p.ytViews)}회</span>` : p.source==='threads' ? `<span>♥ ${fmt(p.likes)}</span><span>↩ ${fmt(p.comments)}</span><span>⟳ ${fmt(p.thReposts)}</span>` : `<span>♥ ${fmt(p.likes)}</span><span>💬 ${fmt(p.comments)}</span><span>인기 ${fmt(p.score)}</span>`}<a href="${p.url}" target="_blank" style="margin-left:auto;color:var(--accent)">${p.source==='github'?'저장소':p.source==='youtube'?'영상':'원문'}</a></div>
       <div class="caption">${esc(p.caption||'')}</div>
@@ -297,6 +309,8 @@ window.bootDashboard = function(){
     const fv = document.getElementById('fVerdict').value, tool = fTool.value, type = fType.value, status = document.getElementById('fStatus').value;
     const period = document.getElementById('fPeriod').value, sort = document.getElementById('sort').value;
     let list = posts.filter(p => {
+      if (tab === 'mine' && !isMine(p)) return false;
+      if (tab === 'found' && isMine(p)) return false;
       if (fv && verdict(p) !== fv) return false;
       if (fs_ && (p.source||'') !== fs_) return false;
       if (ft_ && !(p.topics||[]).includes(ft_)) return false;
@@ -310,15 +324,17 @@ window.bootDashboard = function(){
       }
       return true;
     });
-    const cmp = sort === 'date' ? (a,b) => (b._date||0)-(a._date||0) : sort === 'score' ? (a,b) => (b.score||0)-(a.score||0) : (a,b) => applyScore(b)-applyScore(a);
+    const cmp = sort === 'date' ? (a,b) => tsOf(b)-tsOf(a) : sort === 'score' ? (a,b) => (b.score||0)-(a.score||0) : (a,b) => applyScore(b)-applyScore(a);
     list.sort(cmp);
     const feed = document.getElementById('feed'), low = document.getElementById('feedLow'), lz = document.getElementById('lowzone');
     if (!posts.length) {
       feed.innerHTML = `<div class="empty" style="grid-column:1/-1">아직 수집된 게시물이 없어요.<br>인스타에서 게시물을 <code>저장</code>하면 매일 09:00 루틴이 가져와 분석합니다.</div>`;
       lz.style.display = 'none'; return;
     }
-    const main = fv ? list : list.filter(p => verdict(p) !== '비현실');
-    const lowList = fv ? [] : list.filter(p => verdict(p) === '비현실');
+    // 내가 저장한 자료는 판정과 상관없이 모두 본문에 보여준다(비현실도 접지 않음)
+    const keepAll = fv || tab === 'mine';
+    const main = keepAll ? list : list.filter(p => verdict(p) !== '비현실');
+    const lowList = keepAll ? [] : list.filter(p => verdict(p) === '비현실');
     feed.innerHTML = main.length ? main.map(card).join('') : `<div class="empty" style="grid-column:1/-1">필터 조건에 맞는 게시물이 없어요.</div>`;
     bind(feed);
     if (lowList.length) { lz.style.display = ''; document.getElementById('lowzoneSummary').textContent = `비현실 / 참고만 (${lowList.length}) 펼치기`; low.innerHTML = lowList.map(card).join(''); bind(low); }
@@ -327,6 +343,12 @@ window.bootDashboard = function(){
   const qsTopic = new URLSearchParams(location.search).get('topic');
   if (qsTopic && [...fTopic.options].some(o => o.value === qsTopic)) fTopic.value = qsTopic;
   ['q','fTopic','fSource','fVerdict','fTool','fType','fStatus','fPeriod','sort'].forEach(id => document.getElementById(id).addEventListener('input', render));
+  const nMine = posts.filter(isMine).length;
+  document.getElementById('cMine').textContent = nMine; document.getElementById('cFound').textContent = posts.length - nMine; document.getElementById('cAll').textContent = posts.length;
+  const HINT = { mine: '인스타·Threads에서 직접 저장한 글을 Aside가 분석한 결과예요. 최신 수집순.', found: 'Aside가 해시태그·검색·피드·GitHub에서 찾아 고른 자료예요.', all: '모든 자료' };
+  const setTab = t => { tab = t; document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); document.getElementById('tabHint').textContent = HINT[t]; render(); };
+  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  document.getElementById('tabHint').textContent = HINT.mine;
   document.getElementById('fTopic').addEventListener('input', renderSide);
   const DONE_KEY = (window.SITE_KEY || 'ig-dashboard') + '-pack-done';
   let packDone = {}; try { packDone = JSON.parse(localStorage.getItem(DONE_KEY) || '{}'); } catch(e) {}
